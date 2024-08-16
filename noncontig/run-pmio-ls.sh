@@ -1,8 +1,7 @@
 #!/bin/bash
 #PJM -L "node=2"
 
-# MPI_DIR="/home/isaiah/Documents/Riken2024/PMIO-LS/code/pmio-ls-ins"
-MPI_DIR="/home/isaiah/Documents/Riken2024/PMIO-LS/code/mpich-ins"
+MPI_DIR="/home/isaiah/Documents/Riken2024/PMIO-LS/code/pmio-ls-ins"
 export LD_LIBRARY_PATH="${MPI_DIR}/lib"
 MPIEXEC="${MPI_DIR}/bin/mpiexec"
 
@@ -18,7 +17,7 @@ cat $1
 ${MPIEXEC} -n ${NPROCS} ./noncontig \
     -fname ${FNAME} \
     -${MODE} \
-    -coll -timing \
+    -coll -timing -domerge\
     -veclen ${VECLEN} \
     -veccount ${VECCOUNT} \
     -elmtcount ${ELMTCOUNT} \
