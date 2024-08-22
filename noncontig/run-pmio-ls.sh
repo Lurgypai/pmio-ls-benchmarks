@@ -15,13 +15,16 @@ cat $1
 . $1
 
 ${MPIEXEC} -n ${NPROCS} ./noncontig \
+    -pmio_ls -skip_merge \
     -fname ${FNAME} \
     -${MODE} \
-    -coll -timing -domerge\
+    -coll -timing \
     -veclen ${VECLEN} \
     -veccount ${VECCOUNT} \
     -elmtcount ${ELMTCOUNT} \
     -bufsize ${BUFSIZE} \
-    -loops ${LOOPS}
+    -loops ${LOOPS} \
+    -buffer_folder buffers \
+    -data_buffer_size 131072
 
 

@@ -47,7 +47,8 @@ int cmdline_has_name(int *argc, char **argv, int rflag, char *name);
 int do_timing = 0;
 int do_sync = 1;
 int do_coll = 0;
-int do_merge = 0;
+int do_pmio_ls = 0;
+int skip_merge = 0;
 int be_verbose = 0;
 int loops = 1;
 int do_verify; 
@@ -195,7 +196,7 @@ int noncontigmem_noncontigfile (char *filename, int *buf, MPI_Aint bufsize,
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
-    if(do_merge && myrank == 0) {
+    if(do_pmio_ls && !skip_merge && myrank == 0) {
          t0 = MPI_Wtime();
          stop_merge_thread();
          t_total += MPI_Wtime() - t0;
@@ -363,7 +364,7 @@ int noncontigmem_contigfile (char *filename, int *buf, MPI_Aint bufsize,
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
-    if(do_merge && myrank == 0) {
+    if(do_pmio_ls && !skip_merge && myrank == 0) {
          t0 = MPI_Wtime();
          stop_merge_thread();
          t_total += MPI_Wtime() - t0;
@@ -533,7 +534,7 @@ int contigmem_noncontigfile (char *filename, int *buf, MPI_Aint bufsize,
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
-    if(do_merge && myrank == 0) {
+    if(do_pmio_ls && !skip_merge && myrank == 0) {
          t0 = MPI_Wtime();
          stop_merge_thread();
          t_total += MPI_Wtime() - t0;
@@ -693,7 +694,7 @@ int contigmem_contigfile (char *filename, int *buf, MPI_Aint bufsize,
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
-    if(do_merge && myrank == 0) {
+    if(do_pmio_ls && !skip_merge && myrank == 0) {
          t0 = MPI_Wtime();
          stop_merge_thread();
          t_total += MPI_Wtime() - t0;
@@ -841,7 +842,7 @@ int main(int argc, char **argv)
     run_tests = 0;
     cbsize = 0;
     fsize = 0;
-    do_merge = 0;
+    do_pmio_ls = 0;
 
 #if 0
     /* process 0 takes the file name as a command-line argument and 
@@ -905,8 +906,10 @@ int main(int argc, char **argv)
         do_coll = 1;
     if (cmdline_has_name (&argc, argv, 1, "-v"))
         be_verbose = 1;
-    if(cmdline_has_name (&argc, argv, 1, "-domerge"))
-        do_merge = 1;
+    if(cmdline_has_name (&argc, argv, 1, "-pmio_ls"))
+        do_pmio_ls = 1;
+    if(cmdline_has_name(&argc, argv, 1, "-skip_merge"))
+        skip_merge = 1;
     if (cmdline_has_name (&argc, argv, 1, "-help")) {
         print_help(myrank);
         return 0;
@@ -1039,12 +1042,16 @@ int main(int argc, char **argv)
         fflush (stdout);
     }
 
-    // add start thread call here
-    MPI_Info_set(finfo, "shared_buffer_folder", "buffers");
-    MPI_Info_set(finfo, "data_buffer_size", "131072");
 
-    if(do_merge) {
-        if(myrank == 0) {
+    if(do_pmio_ls) {
+        char buffer_folder[256], buffer_size[16];
+        cmdline_get_string(&argc, argv, 1, "-buffer_folder", buffer_folder, 256);
+        cmdline_get_string(&argc, argv, 1, "-data_buffer_size", buffer_size, 16);
+        // add start thread call here
+        MPI_Info_set(finfo, "shared_buffer_folder", buffer_folder);
+        MPI_Info_set(finfo, "data_buffer_size", buffer_size);
+
+        if(!skip_merge && myrank == 0) {
             printf("Process with rank %d is starting the merging thread.\n", myrank);
             // construct filename arrays
             // call function
@@ -1069,6 +1076,10 @@ int main(int argc, char **argv)
             free(dataFileNames);
 
             printf("merge thread started complete\n");
+        }
+        else if(skip_merge) {
+            MPI_Info_set(finfo, "skip_merge", "enable");
+            MPI_Info_set(finfo, "final_out_folder", buffer_folder);
         }
     }
 
